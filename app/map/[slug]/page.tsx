@@ -31,7 +31,7 @@ export async function generateStaticParams(): Promise<SlugProps[]>
   return paths;
 }
 
-export const getLayer = async (params: SlugProps["params"]) => {
+const getLayer = async (params: SlugProps["params"]) => {
   const data = await queryFeatures({
     url: PLANT_URL,
     outFields: ["OBJECTID", "fuel1"],
