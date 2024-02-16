@@ -1,3 +1,9 @@
+# ArcGIS Maps SDK for JavaScript React components in NextJS
+
+This is a demo project for Esri DevSummit 2024 to highlight how you can use the [Map components (beta)](https://developers.arcgis.com/javascript/latest/components/).
+
+This project uses the [@arcgis/map-components-react](https://www.npmjs.com/package/@arcgis/map-components-react) package.
+
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started
