@@ -1,72 +1,54 @@
-"use client";
-
 import "@arcgis/core/assets/esri/themes/dark/main.css";
-import {
-  ArcgisExpand,
-  ArcgisLegend,
-  ArcgisMap,
-} from "@arcgis/map-components-react";
-
+import { executeQueryJSON } from "@arcgis/core/rest/query";
 import config from "@arcgis/core/config";
-import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
-
-import { useEffect, useRef } from "react";
+import ClientMap from "@/components/ClientMap";
+import { IQueryFeaturesResponse, queryFeatures } from '@esri/arcgis-rest-feature-service';
 
 config.apiKey = process.env.NEXT_PUBLIC_ARCGIS_API_KEY as string;
 
-export default function WebMap({ params }: { params: { slug: string } }) {
-  const mapRef = useRef<HTMLArcgisMapElement>(null);
+interface SlugProps { params: { slug: string }};
 
-  // Popup options
-  const popupOptions: any = {
-    dockEnabled: true,
-    dockOptions: {
-      buttonEnabled: false,
-      breakpoint: false,
-      position: "top-right",
-    },
+const PLANT_URL =
+  "https://services1.arcgis.com/4yjifSiIG17X0gW4/arcgis/rest/services/PowerPlants_WorldResourcesInstitute/FeatureServer/0";
+
+
+// generate the static paths for the dynamic routes
+export async function generateStaticParams(): Promise<SlugProps[]>
+ {
+  const query = {
+    outFields: ["fuel1", "OBJECTID"],
+    where: "1=1",
+    returnDistinctValues: true,
+    returnGeometry: false,
   };
+  const results = await executeQueryJSON(PLANT_URL, query);
+  const values = results.features
+    .map((feature) => feature.attributes["fuel1"])
+    .filter(Boolean)
+    .sort();
 
-  useEffect(() => {
-    // Lazy load the custom elements
-    import("@arcgis/map-components/dist/loader").then(
-      ({ defineCustomElements }) => {
-        defineCustomElements();
-      },
-    );
-  }, []);
+  const paths: SlugProps[] = values.map((value) => ({ params: { slug: value } }));
+  return paths;
+}
 
-  // When the view is ready, add the layer to the map and zoom to it
-  function handleViewReady() {
-    const mapElement = mapRef.current!;
-    const layer = new FeatureLayer({
-      portalItem: {
-        id: "848d61af726f40d890219042253bedd7",
-      },
-      definitionExpression: `fuel1 = '${decodeURI(params.slug)}'`,
-      visible: true,
-    });
+export const getLayer = async (params: SlugProps["params"]) => {
+  const data = await queryFeatures({
+    url: PLANT_URL,
+    outFields: ["OBJECTID", "fuel1"],
+    where: `fuel1 = '${decodeURI(params.slug)}'`,
+  }) as IQueryFeaturesResponse;
+  return data;
+};
 
-    mapElement.map.add(layer);
-    layer.when(async () => {
-      const query = layer.createQuery();
-      const extent = await layer.queryExtent(query);
-      mapElement.goTo(extent);
-    });
-  }
+
+export default async function WebMap({ params }: SlugProps) {
+  // for each dynamic route, get the data for the page by querying the feature layer
+  const layerData = await getLayer(params);
 
   return (
     <div className="w-full h-full">
-      <ArcgisMap
-        ref={mapRef}
-        basemap="arcgis/dark-gray"
-        popup={popupOptions}
-        onArcgisViewReadyChange={handleViewReady}
-      >
-        <ArcgisExpand position="bottom-left">
-          <ArcgisLegend />
-        </ArcgisExpand>
-      </ArcgisMap>
+      {/** pass the feature data down to the client map, which will render the graphics without a network request */}
+      <ClientMap layerData={layerData} />
     </div>
   );
 }
