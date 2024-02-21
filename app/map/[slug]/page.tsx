@@ -64,7 +64,7 @@ export default function WebMap({ params }: { params: { slug: string } }) {
         onArcgisViewReadyChange={handleViewReady}
       >
         <ArcgisExpand position="bottom-left">
-          <ArcgisLegend />
+          <ArcgisLegend legendStyle="card" />
         </ArcgisExpand>
       </ArcgisMap>
     </div>
