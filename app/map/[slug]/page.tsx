@@ -7,15 +7,21 @@ import {
   ArcgisMap,
 } from "@arcgis/map-components-react";
 
+import { ArcgisChartsScatterPlot } from "@arcgis/charts-components-react";
+import { ScatterPlotModel } from "@arcgis/charts-model";
+
 import config from "@arcgis/core/config";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 config.apiKey = process.env.NEXT_PUBLIC_ARCGIS_API_KEY as string;
 
 export default function WebMap({ params }: { params: { slug: string } }) {
   const mapRef = useRef<HTMLArcgisMapElement>(null);
+  const scatterPlotRef = useRef<any>();
+  const [chartConfig, setChartConfig] = useState<any>(undefined);
+  const [featureLayer, setFeatureLayer] = useState<any>(undefined);
 
   // Popup options
   const popupOptions: any = {
@@ -32,6 +38,13 @@ export default function WebMap({ params }: { params: { slug: string } }) {
     import("@arcgis/map-components/dist/loader").then(
       ({ defineCustomElements }) => {
         defineCustomElements();
+      },
+    );
+    import("@arcgis/charts-components/dist/loader").then(
+      ({ defineCustomElements }) => {
+        defineCustomElements(globalThis as any, {
+          resourcesUrl: "https://js.arcgis.com/charts-components/4.29/t9n",
+        });
       },
     );
   }, []);
@@ -52,21 +65,40 @@ export default function WebMap({ params }: { params: { slug: string } }) {
       const query = layer.createQuery();
       const extent = await layer.queryExtent(query);
       mapElement.goTo(extent);
+      const scatterPlotParams = {
+        layer,
+        xAxisFieldName: "estimated_generation_gwh",
+        yAxisFieldName: "capacity_mw",
+      };
+      const scatterPlotModel = new ScatterPlotModel(scatterPlotParams);
+      const config = await scatterPlotModel.config;
+      setFeatureLayer(layer);
+      setChartConfig(config);
     });
   }
 
   return (
     <div className="w-full h-full">
-      <ArcgisMap
-        ref={mapRef}
-        basemap="arcgis/dark-gray"
-        popup={popupOptions}
-        onArcgisViewReadyChange={handleViewReady}
-      >
-        <ArcgisExpand position="bottom-left">
-          <ArcgisLegend legendStyle="card" />
-        </ArcgisExpand>
-      </ArcgisMap>
+      <section className="w-full h-3/4">
+        <ArcgisMap
+          ref={mapRef}
+          basemap="arcgis/dark-gray"
+          popup={popupOptions}
+          onArcgisViewReadyChange={handleViewReady}
+        >
+          <ArcgisExpand position="bottom-left">
+            <ArcgisLegend legendStyle="card" />
+          </ArcgisExpand>
+        </ArcgisMap>
+      </section>
+      <ArcgisChartsScatterPlot
+        ref={scatterPlotRef}
+        placeholder="Loading..."
+        displayErrorAlert={false}
+        config={chartConfig}
+        layer={featureLayer}
+        className="w-full h-1/4"
+      ></ArcgisChartsScatterPlot>
     </div>
   );
 }
